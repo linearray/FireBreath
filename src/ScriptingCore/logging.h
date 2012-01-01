@@ -18,6 +18,7 @@ Copyright 2010 Facebook, Inc
 
 #include <sstream>
 #include <list>
+#include <boost/preprocessor.hpp>
 
 #if !FB_NO_LOGGING_MACROS
 #  if defined(__GNUC__)
@@ -36,26 +37,51 @@ Copyright 2010 Facebook, Inc
 #endif
 
 #if !FB_NO_LOGGING_MACROS
-#  define FBLOG_TRACE(src, msg) FBLOG_LOG_BODY(trace, src, msg)
-#  define FBLOG_DEBUG(src, msg) FBLOG_LOG_BODY(debug, src, msg)
-#  define FBLOG_INFO(src, msg) FBLOG_LOG_BODY(info, src, msg)
-#  define FBLOG_WARN(src, msg) FBLOG_LOG_BODY(warn, src, msg)
-#  define FBLOG_ERROR(src, msg) FBLOG_LOG_BODY(error, src, msg)
-#  define FBLOG_FATAL(src, msg) FBLOG_LOG_BODY(fatal, src, msg)
-#else 
-#  define FBLOG_TRACE(src, msg) 
-#  define FBLOG_DEBUG(src, msg)
-#  define FBLOG_INFO(src, msg)
-#  define FBLOG_WARN(src, msg)
-#  define FBLOG_ERROR(src, msg)
-#  define FBLOG_FATAL(src, msg)
+//#define NUMARGS(...) (sizeof((int[]){__VA_ARGS__})/sizeof(int))
+#define NUMARGS(...) NUM_ARGS_HELPER(__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
+#define NUM_ARGS_HELPER(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...)    N
+
+#define FBLOG_LOG2(src,msg,type) FBLOG_LOG_BODY(type,src,msg)
+#define FBLOG_LOG1(msg,type)     FBLOG_LOG_BODY(type,"",msg)
+
+#define GET_MACRO(...) \
+    BOOST_PP_IF( \
+        BOOST_PP_DEC( NUMARGS(__VA_ARGS__) ), \
+        FBLOG_LOG2, \
+        FBLOG_LOG1)
+
+#define LP (
+#define RP )
+#define COMMA ,
+
+# define FBLOG_TRACE(...) GET_MACRO (__VA_ARGS__) (__VA_ARGS__,trace)
+# define FBLOG_DEBUG(...) GET_MACRO (__VA_ARGS__) (__VA_ARGS__,debug)
+# define FBLOG_INFO(...)  GET_MACRO (__VA_ARGS__) (__VA_ARGS__,info)
+# define FBLOG_WARN(...)  GET_MACRO (__VA_ARGS__) (__VA_ARGS__, warn)
+# define FBLOG_ERROR(...) GET_MACRO (__VA_ARGS__) (__VA_ARGS__,error)
+# define FBLOG_FATAL(...) GET_MACRO (__VA_ARGS__) (__VA_ARGS__,fatal)
+
+/*#  define FBLOG_TRACE(...) CHOOSE(__VA_ARGS__)(trace,__VA_ARGS__)
+#  define FBLOG_DEBUG(...) CHOOSE(__VA_ARGS__)(debug,__VA_ARGS__)
+#  define FBLOG_INFO(...)  CHOOSE(__VA_ARGS__)(info,__VA_ARGS__)
+#  define FBLOG_WARN(...)  CHOOSE(__VA_ARGS__)(warn,__VA_ARGS__)
+#  define FBLOG_ERROR(...) CHOOSE(__VA_ARGS__)(error,__VA_ARGS__)
+#  define FBLOG_FATAL(...) CHOOSE(__VA_ARGS__)(fatal,__VA_ARGS__)*/
+#else
+#  define FBLOG_TRACE(msg)
+#  define FBLOG_DEBUG(msg)
+#  define FBLOG_INFO(msg)
+#  define FBLOG_WARN(msg)
+#  define FBLOG_ERROR(msg)
+#  define FBLOG_FATAL(msg)
 #endif
+
 
 namespace FB { namespace Log {
 
     void initLogging();
     void stopLogging();
-
+    
     void trace(const std::string& src, const std::string& msg, const char *file, int line, const char *fn);
     void debug(const std::string& src, const std::string& msg, const char *file, int line, const char *fn);
     void  info(const std::string& src, const std::string& msg, const char *file, int line, const char *fn);
@@ -108,4 +134,3 @@ namespace FB { namespace Log {
 }; };
 
 #endif
-
